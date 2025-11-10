@@ -96,6 +96,16 @@ img, .linkLogo, #limitlessLinks {
     left: .875vh;
 }
 
+#searchButton {
+    left: 5vh;
+}
+#searchButton:hover {
+    left: 4.875vh;
+}
+#searchButton:active {
+    left: 5.125vh;
+}
+
 #settingsButton {
     right: .75vh;
 }
