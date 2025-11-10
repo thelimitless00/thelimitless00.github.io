@@ -1,4 +1,10 @@
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
+
+
+    document.querySelectorAll('img').forEach(img => {
+        img.setAttribute('draggable', 'false');
+        img.addEventListener('dragstart', e => e.preventDefault());
+    });
 
     const limitlessLinks = document.getElementById("limitlessLinks");
     const linkMenuBox = document.getElementById("linkMenuBox");
@@ -40,14 +46,14 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
 
-    limitlessLinks.addEventListener("click", function() {
+    limitlessLinks.addEventListener("click", function () {
         if (linksExpanded === false) {
             openExpandedLinks();
         } else {
             closeExpandedLinks();
         }
     });
-    contentBlocker.addEventListener("click", function() {
+    contentBlocker.addEventListener("click", function () {
         if (linksExpanded === false) {
             openExpandedLinks();
         } else {

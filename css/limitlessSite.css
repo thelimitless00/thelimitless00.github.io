@@ -14,6 +14,12 @@ a {
     color: #ffffff;
 }
 
+img, .linkLogo, #limitlessLinks {
+  -webkit-user-drag: none;
+  user-drag: none;
+  user-select: none;
+}
+
 #menuBar {
     display: flex;
     border-bottom: 2px solid #3d3d3d;
@@ -53,6 +59,63 @@ a {
     }
 }
 
+.optionButton {
+    height: 3.5vh;
+    width: 3.5vh;
+    background-color: #303030;
+    border: 2px solid #6d6d6d;
+    border-radius: 1vh;
+    position: absolute;
+    transition: 0.1s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.optionButton:hover {
+    height: 3.75vh;
+    width: 3.75vh;
+    cursor: pointer;
+}
+.optionButton:active {
+    height: 3.25vh;
+    width: 3.25vh;
+}
+.optionIcon {
+    height: 60%;
+    width: auto;
+    /*Edit color by opening the .svg file and editing stroke color*/
+}
+
+#menuButton {
+    left: .75vh;
+}
+#menuButton:hover {
+    left: .625vh;
+}
+#menuButton:active {
+    left: .875vh;
+}
+
+#settingsButton {
+    right: .75vh;
+}
+#settingsButton:hover {
+    right: .625vh;
+}
+#settingsButton:active {
+    right: .875vh;
+}
+
+#newsButton {
+    right: 5vh;
+}
+#newsButton:hover {
+    right: 4.875vh;
+}
+#newsButton:active {
+    right: 5.125vh;
+}
+
 #limitlessLinks {
     height: 10vh;
     transition: 0.1s;
@@ -65,8 +128,13 @@ a {
     clip-path: inset(3vh 0px 3vh 0px);
 }
 #limitlessLinks:hover {
-    height: 9.5vh;
+    height: 10.5vh;
     cursor: pointer;
+    top: -2.25vh;
+}
+#limitlessLinks:active {
+    height: 9.5vh;
+    top: -1.75vh;
 }
 
 #linkMenuBox {
