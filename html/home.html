@@ -3,7 +3,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../css/limitlessSite.css">
-    <title>Limitless - Home</title>
+    <title>Limitless</title>
     <link rel="icon" href="../assets/Limitless.png" type="image/x-icon">
     <script src="../javascript/limitlessSite.js"></script>
 </head>
@@ -40,24 +40,17 @@
             </div>
     </div>
     <div id="linkBar">
-        <a class="categoryLink" href="./home.html">Home</a>
-        <a class="categoryLink" href="./creations.html">Creations</a>
-        <a class="categoryLink" href="./projects.html">Projects</a>
-        <a class="categoryLink" href="./news.html">News</a>
-        <a class="categoryLink" href="./aboutMe.html">About Me</a>
+        <a class="categoryLink" href="#" data-page="home">Home</a>
+        <a class="categoryLink" href="#" data-page="creations">Creations</a>
+        <a class="categoryLink" href="#" data-page="projects">Projects</a>
+        <a class="categoryLink" href="#" data-page="news">News</a>
+        <a class="categoryLink" href="#" data-page="aboutMe">About Me</a>
     </div>
 </div>
 <body>
-    <div>
-        <h2>
-            Currently in progress! Please check back later!
-        </h2>
-        <p>
-            On this page you'll be able to see an overview of my website, with quick links to wherever you need!
-        </p>
-        <p>
-            In the meantime, visit my <a href="https://www.youtube.com/@thelimitless00" target="_blank">Youtube Channel</a> or <a href="https://github.com/thelimitless00" target="_blank">GitHub</a>!
-        </p>
+    <div id="pageContent">
+        <h2 id="pageTitle"></h2>
+        <div id="pageText"></div>
     </div>
 </body>
 </html>
