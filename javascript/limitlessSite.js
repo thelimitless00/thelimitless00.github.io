@@ -183,7 +183,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const newsTitle = document.createElement("h2");
         newsTitle.textContent = "News";
+        const newsFeaturedLabel = document.createElement("h3");
+        newsFeaturedLabel.textContent = "Featured";
+        const otherNewsLabel = document.createElement("h3");
+        otherNewsLabel.textContent = "Other News";
+
         pageText.appendChild(newsTitle);
+        pageText.appendChild(newsFeaturedLabel);
 
         // Render featured card (most recent)
         if (newsCards.length > 0) {
@@ -191,7 +197,9 @@ document.addEventListener("DOMContentLoaded", function () {
             const featuredElement = document.createElement("div");
             featuredElement.className = "news-featured-card";
             featuredElement.innerHTML = `
-                <img src="${featuredCard.image}" alt="${featuredCard.title}" class="news-card-image">
+                <div class="news-card-image-container">
+                    <img src="${featuredCard.image}" alt="${featuredCard.title}" class="news-card-image">
+                </div>
                 <div class="news-card-content">
                     <h3 class="news-card-title">${featuredCard.title}</h3>
                     <p class="news-card-date">${featuredCard.date || ""}</p>
@@ -200,13 +208,16 @@ document.addEventListener("DOMContentLoaded", function () {
             `;
             featuredElement.addEventListener("click", () => showNewsFullView(featuredCard));
             pageText.appendChild(featuredElement);
-            
+
             // Trigger fade-in animation
             setTimeout(() => {
                 featuredElement.style.opacity = "1";
                 featuredElement.style.transform = "translateY(0)";
             }, 10);
         }
+
+        // Place this underneath the featured card
+        pageText.appendChild(otherNewsLabel);
 
         // Render remaining cards in grid
         if (newsCards.length > 1) {

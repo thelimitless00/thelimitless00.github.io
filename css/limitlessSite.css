@@ -77,9 +77,10 @@ img,
 
 }
 
-@media screen and (max-width: 1000px) {
+@media screen and (orientation: portrait) {
     .categoryLink {
-        font-size: small;
+        width: 15vw;
+        font-size: 0.8rem;
     }
 }
 
@@ -202,9 +203,15 @@ img,
     font-size: 20pt;
 }
 
-@media screen and (max-width: 600px) {
+@media screen and (orientation: portrait) {
     #linkMenuBox {
         font-size: 12pt
+    }
+}
+
+@media screen and (orientation: portrait) {
+    #linkBoxes {
+        font-size: small;
     }
 }
 
@@ -290,24 +297,32 @@ img,
     margin-bottom: 3rem;
     display: grid;
     grid-template-columns: 1fr 1.2fr;
-    max-width: 800px;
     opacity: 0;
     transform: translateY(20px);
     transition: .2s;
+    width: calc(100vw - 50px) !important;
+    height: 40vh;    
 }
 
 .news-featured-card:hover {
-    scale: 1.05;
+    scale: 1.025;
     box-shadow: 0 8px 16px rgba(255, 255, 255, 0.1);
 }
 
 .news-featured-card .news-card-image {
     width: 100%;
-    height: 100%;
-    min-height: 200px;
-    max-height: 250px;
+    height: 100% !important;
     object-fit: cover;
     display: block;
+}
+
+.news-card-image-container {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .news-featured-card .news-card-content {
@@ -339,6 +354,27 @@ img,
     color: #ffffff;
 }
 
+@media screen and (orientation: portrait) {
+    .news-featured-card {
+        grid-template-columns: 1fr;
+        width: 100%;
+        max-width: none;
+        box-sizing: border-box;
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    .news-featured-card .news-card-image {
+        min-height: 0;
+        max-height: none;
+        height: 180px;
+    }
+
+    .news-featured-card .news-card-content {
+        padding: 1rem;
+    }
+}
+
 .news-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -346,7 +382,7 @@ img,
     margin-top: 2rem;
 }
 
-@media screen and (max-width: 700px) {
+@media screen and (orientation: portrait) {
     .news-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(250px, 20vw));
