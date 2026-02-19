@@ -1,40 +1,19 @@
 document.addEventListener("DOMContentLoaded", function () {
 
-    const PAGE_CONTENT = {
-        home: {
-            title: "Welcome to Limitless!",
-            paragraphs: [
-                "My website is still in progress, but I'm glad you've stopped by! I'm working hard to make a place that I can share my projects and creation updates with you. Check back soon! I'm working on adding new things as often as I can.",
-                "If you'd like to see some of my current projects, please check my other pages on this website!",
-                "In the meantime, visit my <a href=\"https://www.youtube.com/@thelimitless00\" target=\"_blank\">Youtube Channel</a> or <a href=\"https://github.com/thelimitless00\" target=\"_blank\">GitHub</a>!"
-            ]
-        },
-        creations: {
-            title: "Creations",
-            paragraphs: [
-                "This section is where your creations overview text goes.",
-                "Edit the text in PAGE_CONTENT.creations inside javascript/limitlessSite.js."
-            ]
-        },
-        projects: {
-            title: "Projects",
-            paragraphs: [
-                "This section is where your projects overview text goes.",
-                "Edit the text in PAGE_CONTENT.projects inside javascript/limitlessSite.js."
-            ]
-        },
-        news: {
-            title: "Latest News",
-            isSpecial: true
-        },
-        aboutMe: {
-            title: "About Me",
-            paragraphs: [
-                "This section is where your About Me text goes.",
-                "Edit the text in PAGE_CONTENT.aboutMe inside javascript/limitlessSite.js."
-            ]
+    const VALID_PAGES = ["home", "creations", "projects", "news", "aboutMe"];
+    const SPECIAL_PAGES = ["news"];
+
+    async function loadTabContent(pageKey) {
+        try {
+            const response = await fetch(`./tabs/${pageKey}.html`);
+            if (response.ok) {
+                return await response.text();
+            }
+        } catch (error) {
+            console.warn(`Failed to load tab content: ${pageKey}`, error);
         }
-    };
+        return `<p>Failed to load content for ${pageKey}.</p>`;
+    }
 
 
     document.querySelectorAll('img').forEach(img => {
@@ -84,7 +63,6 @@ document.addEventListener("DOMContentLoaded", function () {
         linksExpanded = false;
     }
 
-    const pageTitle = document.getElementById("pageTitle");
     const pageText = document.getElementById("pageText");
     const pageContent = document.getElementById("pageContent");
     const pageLinks = document.querySelectorAll(".categoryLink[data-page]");
@@ -149,24 +127,39 @@ document.addEventListener("DOMContentLoaded", function () {
     let newsFullViewOpen = false;
 
     async function loadNewsCards() {
-        const newsFiles = ["news-001.html", "news-002.html", "news-003.html"];
         newsCards = [];
+        
+        try {
+            // Fetch the news manifest file
+            const manifestResponse = await fetch('./news/news-manifest.json');
+            if (!manifestResponse.ok) {
+                console.warn('Failed to load news manifest');
+                return;
+            }
+            
+            const manifest = await manifestResponse.json();
+            const newsFiles = manifest.newsFiles || [];
 
-        for (const file of newsFiles) {
-            try {
-                const response = await fetch(`./news/${file}`);
-                if (response.ok) {
+            for (const file of newsFiles) {
+                try {
+                    const response = await fetch(`./news/${file}`);
+                    if (response.ok) {
                     const html = await response.text();
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(html, "text/html");
                     const cardDiv = doc.querySelector("div[data-card-title]");
 
                     if (cardDiv) {
+                        // Extract date from filename (yyyy-mm-dd format)
+                        const fileDate = file.substring(0, 10);
+                        
                         newsCards.push({
                             id: file.replace(".html", ""),
                             title: cardDiv.getAttribute("data-card-title"),
                             description: cardDiv.getAttribute("data-card-description"),
                             image: cardDiv.getAttribute("data-card-image"),
+                            date: cardDiv.getAttribute("data-card-date"),
+                            fileDate: fileDate,
                             fullContent: html
                         });
                     }
@@ -175,54 +168,153 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.warn(`Failed to load news file: ${file}`, error);
             }
         }
+        } catch (error) {
+            console.warn('Error loading news cards:', error);
+        }
+        
+        // Sort by date in descending order (newest first)
+        newsCards.sort((a, b) => b.fileDate.localeCompare(a.fileDate));
     }
 
     function renderNewsGrid() {
-        if (!pageTitle || !pageText) return;
+        if (!pageText) return;
 
-        pageTitle.textContent = "News";
         pageText.innerHTML = "";
 
-        const gridContainer = document.createElement("div");
-        gridContainer.id = "newsGrid";
-        gridContainer.className = "news-grid";
+        const newsTitle = document.createElement("h2");
+        newsTitle.textContent = "News";
+        pageText.appendChild(newsTitle);
 
-        newsCards.forEach(card => {
-            const cardElement = document.createElement("div");
-            cardElement.className = "news-card";
-            cardElement.innerHTML = `
-                <img src="${card.image}" alt="${card.title}" class="news-card-image">
-                <h3 class="news-card-title">${card.title}</h3>
-                <p class="news-card-description">${card.description}</p>
+        // Render featured card (most recent)
+        if (newsCards.length > 0) {
+            const featuredCard = newsCards[0];
+            const featuredElement = document.createElement("div");
+            featuredElement.className = "news-featured-card";
+            featuredElement.innerHTML = `
+                <img src="${featuredCard.image}" alt="${featuredCard.title}" class="news-card-image">
+                <div class="news-card-content">
+                    <h3 class="news-card-title">${featuredCard.title}</h3>
+                    <p class="news-card-date">${featuredCard.date || ""}</p>
+                    <p class="news-card-description">${featuredCard.description}</p>
+                </div>
             `;
-            cardElement.addEventListener("click", () => showNewsFullView(card));
-            gridContainer.appendChild(cardElement);
-        });
+            featuredElement.addEventListener("click", () => showNewsFullView(featuredCard));
+            pageText.appendChild(featuredElement);
+            
+            // Trigger fade-in animation
+            setTimeout(() => {
+                featuredElement.style.opacity = "1";
+                featuredElement.style.transform = "translateY(0)";
+            }, 10);
+        }
 
-        pageText.appendChild(gridContainer);
+        // Render remaining cards in grid
+        if (newsCards.length > 1) {
+            const gridContainer = document.createElement("div");
+            gridContainer.id = "newsGrid";
+            gridContainer.className = "news-grid";
+
+            newsCards.slice(1).forEach((card, index) => {
+                const cardElement = document.createElement("div");
+                cardElement.className = "news-card";
+                cardElement.innerHTML = `
+                    <img src="${card.image}" alt="${card.title}" class="news-card-image">
+                    <h3 class="news-card-title">${card.title}</h3>
+                    <p class="news-card-date">${card.date || ""}</p>
+                    <p class="news-card-description">${card.description}</p>
+                `;
+                cardElement.addEventListener("click", () => showNewsFullView(card));
+                gridContainer.appendChild(cardElement);
+                
+                // Stagger the fade-in animation for each card
+                setTimeout(() => {
+                    cardElement.style.opacity = "1";
+                    cardElement.style.transform = "translateY(0)";
+                }, 50 + (index * 50));
+            });
+
+            pageText.appendChild(gridContainer);
+        }
+        
         newsFullViewOpen = false;
     }
 
     function showNewsFullView(card) {
-        if (!pageText) return;
+        if (!pageContent || newsFullViewOpen) return;
 
-        pageText.innerHTML = "";
+        // Create backdrop blur overlay
+        const backdrop = document.createElement("div");
+        backdrop.className = "news-overlay-backdrop";
+        backdrop.id = "newsOverlayBackdrop";
+        backdrop.addEventListener("click", closeNewsFullView);
+        
+        // Create back button
         const backButton = document.createElement("button");
         backButton.className = "news-back-button";
-        backButton.textContent = "← Back to News";
-        backButton.addEventListener("click", () => renderNewsGrid());
-
-        const fullViewContainer = document.createElement("div");
-        fullViewContainer.className = "news-full-view";
-        fullViewContainer.innerHTML = card.fullContent;
-
-        pageText.appendChild(backButton);
-        pageText.appendChild(fullViewContainer);
+        const backButtonIcon = document.createElement("img");
+        backButtonIcon.src = "../assets/back.svg";
+        backButtonIcon.alt = "Back";
+        backButtonIcon.className = "news-back-button-icon";
+        backButton.appendChild(backButtonIcon);
+        backButton.addEventListener("click", closeNewsFullView);
+        
+        // Create expanded card container
+        const expandedCard = document.createElement("div");
+        expandedCard.className = "news-expanded-card";
+        expandedCard.id = "newsExpandedCard";
+        
+        // Add banner image
+        const bannerImage = document.createElement("img");
+        bannerImage.src = card.image;
+        bannerImage.alt = card.title;
+        bannerImage.className = "news-expanded-banner";
+        
+        // Add content
+        const contentDiv = document.createElement("div");
+        contentDiv.className = "news-expanded-content";
+        contentDiv.innerHTML = card.fullContent;
+        
+        expandedCard.appendChild(bannerImage);
+        expandedCard.appendChild(contentDiv);
+        
+        // Append to pageContent
+        pageContent.appendChild(backdrop);
+        pageContent.appendChild(backButton);
+        pageContent.appendChild(expandedCard);
+        
+        // Trigger animations
+        requestAnimationFrame(() => {
+            backdrop.classList.add("visible");
+            backButton.classList.add("visible");
+            expandedCard.classList.add("visible");
+        });
+        
         newsFullViewOpen = true;
+    }
+    
+    function closeNewsFullView() {
+        const backdrop = document.getElementById("newsOverlayBackdrop");
+        const expandedCard = document.getElementById("newsExpandedCard");
+        const backButton = document.querySelector(".news-back-button");
+        
+        if (!backdrop || !expandedCard || !backButton) return;
+        
+        // Remove visible class to trigger fade out
+        backdrop.classList.remove("visible");
+        backButton.classList.remove("visible");
+        expandedCard.classList.remove("visible");
+        
+        // Remove elements after transition
+        setTimeout(() => {
+            if (backdrop.parentNode) backdrop.remove();
+            if (expandedCard.parentNode) expandedCard.remove();
+            if (backButton.parentNode) backButton.remove();
+            newsFullViewOpen = false;
+        }, 300);
     }
 
     function getValidPageKey(pageKey) {
-        if (Object.prototype.hasOwnProperty.call(PAGE_CONTENT, pageKey)) {
+        if (VALID_PAGES.includes(pageKey)) {
             return pageKey;
         }
 
@@ -236,28 +328,29 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    function applyPageContent(pageKey) {
+    async function applyPageContent(pageKey) {
         const validPageKey = getValidPageKey(pageKey);
-        const page = PAGE_CONTENT[validPageKey];
 
-        if (pageTitle && pageText) {
-            pageTitle.textContent = page.title;
+        if (pageText) {
             pageText.innerHTML = "";
 
-            if (validPageKey === "news" && page.isSpecial) {
-                if (newsCards.length === 0) {
-                    const loadingMsg = document.createElement("p");
-                    loadingMsg.textContent = "Loading news...";
-                    pageText.appendChild(loadingMsg);
-                } else {
-                    renderNewsGrid();
+            if (SPECIAL_PAGES.includes(validPageKey)) {
+                if (validPageKey === "news") {
+                    if (newsCards.length === 0) {
+                        const loadingMsg = document.createElement("p");
+                        loadingMsg.textContent = "Loading news...";
+                        pageText.appendChild(loadingMsg);
+                    } else {
+                        renderNewsGrid();
+                    }
                 }
-            } else if (page.paragraphs) {
-                page.paragraphs.forEach(paragraphText => {
-                    const paragraph = document.createElement("p");
-                    paragraph.innerHTML = paragraphText;
-                    pageText.appendChild(paragraph);
-                });
+            } else {
+                const loadingMsg = document.createElement("p");
+                loadingMsg.textContent = "Loading...";
+                pageText.appendChild(loadingMsg);
+
+                const content = await loadTabContent(validPageKey);
+                pageText.innerHTML = content;
             }
         }
 
@@ -265,13 +358,13 @@ document.addEventListener("DOMContentLoaded", function () {
         currentPageKey = validPageKey;
     }
 
-    function renderPage(pageKey, useFade = true) {
+    async function renderPage(pageKey, useFade = true) {
         if (currentPageKey === pageKey) {
             return;
         }
 
         if (!useFade || !pageContent) {
-            applyPageContent(pageKey);
+            await applyPageContent(pageKey);
             return;
         }
 
@@ -281,8 +374,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         pageContent.classList.add("is-fading");
 
-        contentFadeTimeout = setTimeout(function () {
-            applyPageContent(pageKey);
+        contentFadeTimeout = setTimeout(async function () {
+            await applyPageContent(pageKey);
             pageContent.classList.remove("is-fading");
             contentFadeTimeout = null;
         }, contentFadeMs);
