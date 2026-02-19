@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", function () {
         linkBoxes.style.pointerEvents = "none";
         linkMenuBox.style.height = "0px";
         linkMenuBox.style.width = "10vw";
-        linkMenuBox.style.top = "0px";
+        linkMenuBox.style.top = "-4px";
         linkMenuBox.style.left = "45vw";
         contentBlocker.style.backgroundColor = "rgba(0, 0, 0, 0%)";
         contentBlocker.style.opacity = "0%";
