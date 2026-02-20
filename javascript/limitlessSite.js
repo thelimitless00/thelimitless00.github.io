@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
 
     const VALID_PAGES = ["home", "creations", "projects", "news", "aboutMe"];
-    const SPECIAL_PAGES = ["news"];
+    const SPECIAL_PAGES = ["news", "projects"];
 
     async function loadTabContent(pageKey) {
         try {
@@ -71,6 +71,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let newsCards = [];
     let newsFullViewOpen = false;
+    let projectCards = [];
+    let projectsFullViewOpen = false;
 
     async function loadNewsCards() {
         newsCards = [];
@@ -120,6 +122,35 @@ document.addEventListener("DOMContentLoaded", function () {
         
         // Sort by date in descending order (newest first)
         newsCards.sort((a, b) => b.fileDate.localeCompare(a.fileDate));
+    }
+
+    async function loadProjectCards() {
+        projectCards = [];
+
+        try {
+            const response = await fetch("./tabs/projects.html");
+            if (!response.ok) {
+                console.warn("Failed to load projects tab content");
+                return;
+            }
+
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, "text/html");
+            const projectDivs = doc.querySelectorAll("div[data-project-title]");
+
+            projectDivs.forEach((projectDiv, index) => {
+                projectCards.push({
+                    id: `project-${index}`,
+                    title: projectDiv.getAttribute("data-project-title") || "Untitled Project",
+                    description: projectDiv.getAttribute("data-project-description") || "",
+                    image: projectDiv.getAttribute("data-project-image") || "",
+                    fullContent: projectDiv.innerHTML
+                });
+            });
+        } catch (error) {
+            console.warn("Error loading project cards:", error);
+        }
     }
 
     function renderNewsGrid() {
@@ -247,6 +278,114 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         
         newsFullViewOpen = true;
+    }
+
+    function renderProjectsGrid() {
+        if (!pageText) return;
+
+        pageText.innerHTML = "";
+
+        const projectsTitle = document.createElement("h2");
+        projectsTitle.textContent = "Projects";
+        pageText.appendChild(projectsTitle);
+
+        if (projectCards.length === 0) {
+            const emptyMsg = document.createElement("p");
+            emptyMsg.textContent = "No projects are available yet.";
+            pageText.appendChild(emptyMsg);
+            projectsFullViewOpen = false;
+            return;
+        }
+
+        const gridContainer = document.createElement("div");
+        gridContainer.id = "projectsGrid";
+        gridContainer.className = "projects-grid";
+
+        projectCards.forEach((card, index) => {
+            const cardElement = document.createElement("div");
+            cardElement.className = "projects-card";
+            cardElement.innerHTML = `
+                <img src="${card.image}" alt="${card.title}" class="projects-card-image">
+                <h3 class="projects-card-title">${card.title}</h3>
+                <p class="projects-card-description">${card.description}</p>
+            `;
+
+            cardElement.addEventListener("click", () => showProjectFullView(card));
+            gridContainer.appendChild(cardElement);
+
+            setTimeout(() => {
+                cardElement.style.opacity = "1";
+                cardElement.style.transform = "translateY(0)";
+            }, 50 + (index * 50));
+        });
+
+        pageText.appendChild(gridContainer);
+        projectsFullViewOpen = false;
+    }
+
+    function showProjectFullView(card) {
+        if (!pageContent || projectsFullViewOpen) return;
+
+        const backdrop = document.createElement("div");
+        backdrop.className = "projects-overlay-backdrop";
+        backdrop.id = "projectsOverlayBackdrop";
+        backdrop.addEventListener("click", closeProjectFullView);
+
+        const backButton = document.createElement("button");
+        backButton.className = "news-back-button";
+        backButton.id = "projectsBackButton";
+        const backButtonIcon = document.createElement("img");
+        backButtonIcon.src = "../assets/back.svg";
+        backButtonIcon.alt = "Back";
+        backButton.appendChild(backButtonIcon);
+        backButton.addEventListener("click", closeProjectFullView);
+
+        const expandedCard = document.createElement("div");
+        expandedCard.className = "projects-expanded-card";
+        expandedCard.id = "projectsExpandedCard";
+
+        const bannerImage = document.createElement("img");
+        bannerImage.src = card.image;
+        bannerImage.alt = card.title;
+        bannerImage.className = "projects-expanded-banner";
+
+        const contentDiv = document.createElement("div");
+        contentDiv.className = "projects-expanded-content";
+        contentDiv.innerHTML = card.fullContent;
+
+        expandedCard.appendChild(bannerImage);
+        expandedCard.appendChild(contentDiv);
+
+        pageContent.appendChild(backdrop);
+        pageContent.appendChild(backButton);
+        pageContent.appendChild(expandedCard);
+
+        requestAnimationFrame(() => {
+            backdrop.classList.add("visible");
+            backButton.classList.add("visible");
+            expandedCard.classList.add("visible");
+        });
+
+        projectsFullViewOpen = true;
+    }
+
+    function closeProjectFullView() {
+        const backdrop = document.getElementById("projectsOverlayBackdrop");
+        const expandedCard = document.getElementById("projectsExpandedCard");
+        const backButton = document.getElementById("projectsBackButton");
+
+        if (!backdrop || !expandedCard || !backButton) return;
+
+        backdrop.classList.remove("visible");
+        backButton.classList.remove("visible");
+        expandedCard.classList.remove("visible");
+
+        setTimeout(() => {
+            if (backdrop.parentNode) backdrop.remove();
+            if (expandedCard.parentNode) expandedCard.remove();
+            if (backButton.parentNode) backButton.remove();
+            projectsFullViewOpen = false;
+        }, 300);
     }
     
     function closeNewsFullView() {
@@ -468,14 +607,14 @@ document.addEventListener("DOMContentLoaded", function () {
                     const nextTitle = cardElement.querySelector(".creation-title")?.textContent || defaultTitleText;
                     creationsTitle.textContent = nextTitle;
                     creationsTitle.style.position = "relative";
-                    creationsTitle.style.zIndex = "2";
+                    creationsTitle.style.zIndex = "4";
                     creationsLayout.style.display = "none";
 
                     const backButton = document.createElement("button");
                     backButton.className = "creations-inline-back-button";
                     backButton.type = "button";
                     backButton.style.position = "relative";
-                    backButton.style.zIndex = "2";
+                    backButton.style.zIndex = "4";
                     const backIcon = document.createElement("img");
                     backIcon.src = "../assets/back.svg";
                     backIcon.alt = "Back";
@@ -587,6 +726,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     } else {
                         renderNewsGrid();
                     }
+                } else if (validPageKey === "projects") {
+                    renderProjectsGrid();
                 }
             } else {
                 const loadingMsg = document.createElement("p");
@@ -654,7 +795,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    loadNewsCards().then(() => {
+    Promise.all([loadNewsCards(), loadProjectCards()]).then(() => {
         renderPage("home", false);
     });
 });
