@@ -25,9 +25,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const linkMenuBox = document.getElementById("linkMenuBox");
     const contentBlocker = document.getElementById("contentBlocker");
     const linkBoxes = document.getElementById("linkBoxes");
-    const menuButton = document.getElementById("menuButton");
-    const searchButton = document.getElementById("searchButton");
-    const settingsButton = document.getElementById("settingsButton");
     let linksExpanded = false;
 
     function openExpandedLinks() {
@@ -66,62 +63,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const pageText = document.getElementById("pageText");
     const pageContent = document.getElementById("pageContent");
     const pageLinks = document.querySelectorAll(".categoryLink[data-page]");
-    const newsButton = document.getElementById("newsButton");
     const contentFadeMs = 250;
-    const popupMessage = "Currently not functioning.";
-    const popupHideDelayMs = 1500;
+    const creationsMobileQuery = window.matchMedia("(orientation: portrait)");
     let currentPageKey = null;
     let contentFadeTimeout = null;
-    let popupHideTimeout = null;
-
-    function createButtonPopup() {
-        const popup = document.createElement("div");
-        popup.id = "buttonNoticePopup";
-        popup.setAttribute("role", "status");
-        popup.setAttribute("aria-live", "polite");
-        popup.textContent = popupMessage;
-        document.body.appendChild(popup);
-        return popup;
-    }
-
-    function getButtonPopup() {
-        return document.getElementById("buttonNoticePopup") || createButtonPopup();
-    }
-
-    function showButtonPopup(targetButton) {
-        if (!targetButton) {
-            return;
-        }
-
-        const popup = getButtonPopup();
-        const buttonRect = targetButton.getBoundingClientRect();
-
-        popup.classList.remove("visible");
-
-        const horizontalOffset = 10;
-        const verticalOffset = -4;
-        popup.style.top = `${buttonRect.top + verticalOffset}px`;
-
-        if (targetButton.id === "settingsButton" || targetButton.id === "newsButton") {
-            const leftPosition = buttonRect.left - popup.offsetWidth - horizontalOffset;
-            popup.style.left = `${Math.max(horizontalOffset, leftPosition)}px`;
-        } else {
-            popup.style.left = `${buttonRect.right + horizontalOffset}px`;
-        }
-
-        requestAnimationFrame(() => {
-            popup.classList.add("visible");
-        });
-
-        if (popupHideTimeout) {
-            clearTimeout(popupHideTimeout);
-        }
-
-        popupHideTimeout = setTimeout(function () {
-            popup.classList.remove("visible");
-            popupHideTimeout = null;
-        }, popupHideDelayMs);
-    }
+    let creationsMediaQueryListenerBound = false;
 
     let newsCards = [];
     let newsFullViewOpen = false;
@@ -339,6 +285,293 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    function initializeCreationsMedia() {
+        const creationsTitle = pageText ? pageText.querySelector("h2") : null;
+        const creationsLayout = pageText ? pageText.querySelector(".creations-layout") : null;
+        const detailPagesRoot = pageText ? pageText.querySelector(".creations-detail-pages") : null;
+
+        const imageElements = document.querySelectorAll(".creations-layout img[data-mobile-src]");
+        imageElements.forEach(imageElement => {
+            if (!imageElement.dataset.desktopSrc) {
+                imageElement.dataset.desktopSrc = imageElement.getAttribute("src") || "";
+            }
+        });
+
+        const creationVideoIds = ["musicVideo", "writingVideo", "gamesVideo", "videosVideo", "artVideo"];
+
+        creationVideoIds.forEach(videoId => {
+            const videoElement = document.getElementById(videoId);
+            if (!videoElement || videoElement.tagName !== "VIDEO") {
+                return;
+            }
+
+            const creationCard = videoElement.closest(".creation-card");
+            if (!creationCard) {
+                return;
+            }
+
+            videoElement.muted = true;
+            videoElement.loop = true;
+            videoElement.playsInline = true;
+            videoElement.disablePictureInPicture = true;
+            videoElement.disableRemotePlayback = true;
+            videoElement.controls = false;
+            videoElement.setAttribute("playsinline", "");
+            videoElement.setAttribute("disablepictureinpicture", "");
+            videoElement.setAttribute("disableremoteplayback", "");
+            videoElement.setAttribute("controlslist", "nodownload noplaybackrate noremoteplayback nofullscreen");
+
+            const sourceElement = videoElement.querySelector("source");
+            if (sourceElement && !videoElement.dataset.desktopSrc) {
+                videoElement.dataset.desktopSrc = sourceElement.getAttribute("src") || "";
+            }
+
+            creationCard.addEventListener("mouseenter", function () {
+                videoElement.play().catch(() => {});
+            });
+
+            creationCard.addEventListener("mouseleave", function () {
+                videoElement.pause();
+            });
+        });
+
+        if (creationsTitle && creationsLayout && detailPagesRoot) {
+            const defaultTitleText = creationsTitle.textContent || "Creations";
+            let activeDetailView = null;
+            let activeBackButton = null;
+            let activeFadeOverlay = null;
+
+            function closeCreationDetailView() {
+                // Create fade overlay
+                const fadeOverlay = document.createElement("div");
+                fadeOverlay.className = "creations-fade-overlay";
+                pageContent.appendChild(fadeOverlay);
+
+                // Fade to black
+                setTimeout(() => {
+                    fadeOverlay.classList.add("visible");
+                }, 10);
+
+                // After fade to black completes, remove content and show cards
+                setTimeout(() => {
+                    if (activeFadeOverlay) {
+                        activeFadeOverlay.remove();
+                        activeFadeOverlay = null;
+                    }
+
+                    if (activeDetailView) {
+                        activeDetailView.remove();
+                        activeDetailView = null;
+                    }
+
+                    if (activeBackButton) {
+                        activeBackButton.remove();
+                        activeBackButton = null;
+                    }
+
+                    creationsTitle.textContent = defaultTitleText;
+                    creationsTitle.style.position = "";
+                    creationsTitle.style.zIndex = "";
+                    creationsLayout.style.display = "";
+
+                    // Fade out black overlay to reveal cards
+                    setTimeout(() => {
+                        fadeOverlay.classList.remove("visible");
+                    }, 10);
+
+                    // Remove overlay after fade out completes
+                    setTimeout(() => {
+                        if (fadeOverlay.parentNode) {
+                            fadeOverlay.remove();
+                        }
+                    }, 310);
+                }, 300);
+            }
+
+            function createBackgroundMediaFromCard(cardElement) {
+                const customBackgroundSrc = cardElement.dataset.backgroundSrc;
+
+                if (customBackgroundSrc) {
+                    const isVideo = /\.(mp4|webm|ogg)$/i.test(customBackgroundSrc);
+                    if (isVideo) {
+                        const backgroundVideo = document.createElement("video");
+                        backgroundVideo.muted = true;
+                        backgroundVideo.loop = true;
+                        backgroundVideo.autoplay = true;
+                        backgroundVideo.playsInline = true;
+                        backgroundVideo.setAttribute("playsinline", "");
+                        backgroundVideo.src = customBackgroundSrc;
+                        backgroundVideo.play().catch(() => {});
+                        return backgroundVideo;
+                    } else {
+                        const backgroundImage = document.createElement("img");
+                        backgroundImage.src = customBackgroundSrc;
+                        backgroundImage.alt = "";
+                        return backgroundImage;
+                    }
+                }
+
+                const videoElement = cardElement.querySelector("video");
+                if (videoElement) {
+                    const sourceElement = videoElement.querySelector("source");
+                    const videoSrc = sourceElement ? sourceElement.getAttribute("src") : "";
+                    if (videoSrc) {
+                        const backgroundVideo = document.createElement("video");
+                        backgroundVideo.muted = true;
+                        backgroundVideo.loop = true;
+                        backgroundVideo.autoplay = true;
+                        backgroundVideo.playsInline = true;
+                        backgroundVideo.setAttribute("playsinline", "");
+                        backgroundVideo.src = videoSrc;
+                        backgroundVideo.play().catch(() => {});
+                        return backgroundVideo;
+                    }
+                }
+
+                const imageElement = cardElement.querySelector("img");
+                if (imageElement) {
+                    const backgroundImage = document.createElement("img");
+                    backgroundImage.src = imageElement.getAttribute("src") || "";
+                    backgroundImage.alt = "";
+                    return backgroundImage;
+                }
+
+                return document.createElement("div");
+            }
+
+            function openCreationDetailView(cardElement) {
+                const creationKey = cardElement.dataset.creationKey;
+                if (!creationKey) {
+                    return;
+                }
+
+                const detailTemplate = detailPagesRoot.querySelector(`.creation-detail-page[data-creation-key="${creationKey}"]`);
+                if (!detailTemplate) {
+                    return;
+                }
+
+                closeCreationDetailView();
+
+                // Create fade overlay
+                const fadeOverlay = document.createElement("div");
+                fadeOverlay.className = "creations-fade-overlay";
+                pageContent.appendChild(fadeOverlay);
+                activeFadeOverlay = fadeOverlay;
+
+                // Fade to black
+                setTimeout(() => {
+                    fadeOverlay.classList.add("visible");
+                }, 10);
+
+                // After fade to black completes, show content
+                setTimeout(() => {
+                    const nextTitle = cardElement.querySelector(".creation-title")?.textContent || defaultTitleText;
+                    creationsTitle.textContent = nextTitle;
+                    creationsTitle.style.position = "relative";
+                    creationsTitle.style.zIndex = "2";
+                    creationsLayout.style.display = "none";
+
+                    const backButton = document.createElement("button");
+                    backButton.className = "creations-inline-back-button";
+                    backButton.type = "button";
+                    backButton.style.position = "relative";
+                    backButton.style.zIndex = "2";
+                    const backIcon = document.createElement("img");
+                    backIcon.src = "../assets/back.svg";
+                    backIcon.alt = "Back";
+                    backIcon.className = "creations-back-button-icon";
+                    backButton.appendChild(backIcon);
+                    backButton.addEventListener("click", closeCreationDetailView);
+                    creationsTitle.insertAdjacentElement("beforebegin", backButton);
+                    activeBackButton = backButton;
+
+                    const detailView = document.createElement("div");
+                    detailView.className = "creations-detail-view";
+
+                    const backgroundLayer = document.createElement("div");
+                    backgroundLayer.className = "creations-detail-background";
+                    backgroundLayer.appendChild(createBackgroundMediaFromCard(cardElement));
+
+                    const contentLayer = document.createElement("div");
+                    contentLayer.className = "creations-detail-content";
+                    const clonedContent = detailTemplate.cloneNode(true);
+                    const redundantHeading = clonedContent.querySelector("h3");
+                    if (redundantHeading) {
+                        redundantHeading.remove();
+                    }
+                    contentLayer.appendChild(clonedContent);
+
+                    detailView.appendChild(backgroundLayer);
+                    detailView.appendChild(contentLayer);
+                    creationsTitle.insertAdjacentElement("afterend", detailView);
+
+                    activeDetailView = detailView;
+
+                    // Fade out black overlay to reveal content
+                    setTimeout(() => {
+                        fadeOverlay.classList.remove("visible");
+                    }, 10);
+
+                    // Remove overlay after fade out completes
+                    setTimeout(() => {
+                        if (fadeOverlay.parentNode) {
+                            fadeOverlay.remove();
+                        }
+                        activeFadeOverlay = null;
+                    }, 310);
+                }, 300);
+            }
+
+            creationsLayout.querySelectorAll(".creation-card").forEach(cardElement => {
+                cardElement.addEventListener("click", function () {
+                    openCreationDetailView(cardElement);
+                });
+            });
+        }
+
+        applyCreationsResponsiveSources();
+
+        if (!creationsMediaQueryListenerBound) {
+            creationsMobileQuery.addEventListener("change", applyCreationsResponsiveSources);
+            creationsMediaQueryListenerBound = true;
+        }
+    }
+
+    function applyCreationsResponsiveSources() {
+        const useMobileSource = creationsMobileQuery.matches;
+
+        document.querySelectorAll(".creations-layout img[data-mobile-src]").forEach(imageElement => {
+            const desktopSrc = imageElement.dataset.desktopSrc || imageElement.getAttribute("src") || "";
+            const mobileSrc = imageElement.dataset.mobileSrc || "";
+            const nextSrc = useMobileSource && mobileSrc ? mobileSrc : desktopSrc;
+
+            if (nextSrc && imageElement.getAttribute("src") !== nextSrc) {
+                imageElement.setAttribute("src", nextSrc);
+            }
+        });
+
+        document.querySelectorAll(".creations-layout video[data-mobile-src]").forEach(videoElement => {
+            const sourceElement = videoElement.querySelector("source");
+            if (!sourceElement) {
+                return;
+            }
+
+            const desktopSrc = videoElement.dataset.desktopSrc || sourceElement.getAttribute("src") || "";
+            const mobileSrc = videoElement.dataset.mobileSrc || "";
+            const nextSrc = useMobileSource && mobileSrc ? mobileSrc : desktopSrc;
+
+            if (nextSrc && sourceElement.getAttribute("src") !== nextSrc) {
+                const wasPlaying = !videoElement.paused;
+                sourceElement.setAttribute("src", nextSrc);
+                videoElement.load();
+
+                if (wasPlaying) {
+                    videoElement.play().catch(() => {});
+                }
+            }
+        });
+    }
+
     async function applyPageContent(pageKey) {
         const validPageKey = getValidPageKey(pageKey);
 
@@ -362,6 +595,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 const content = await loadTabContent(validPageKey);
                 pageText.innerHTML = content;
+
+                if (validPageKey === "creations") {
+                    initializeCreationsMedia();
+                }
             }
         }
 
@@ -414,22 +651,6 @@ document.addEventListener("DOMContentLoaded", function () {
         link.addEventListener("click", function (event) {
             event.preventDefault();
             renderPage(link.dataset.page);
-        });
-    });
-
-    if (newsButton) {
-        newsButton.addEventListener("click", function () {
-            showButtonPopup(newsButton);
-        });
-    }
-
-    [menuButton, searchButton, settingsButton].forEach(button => {
-        if (!button) {
-            return;
-        }
-
-        button.addEventListener("click", function () {
-            showButtonPopup(button);
         });
     });
 
