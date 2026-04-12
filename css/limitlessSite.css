@@ -292,7 +292,7 @@ img,
 }
 
 .news-featured-card:hover {
-    scale: 1.015;
+    scale: 1.01;
     box-shadow: 0 8px 16px rgba(255, 255, 255, 0.1);
 }
 
